@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<body>
+	<div id="info"></div>
+	<h1 id="app_header"></h1>
+	<div id="app_list"></div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script type="text/javascript">
+		document.body.onload = doOnLoad;
+		var start = 'A'.charCodeAt(0)
+		var end = 'Z'.charCodeAt(0)
+		var additionalKeys = ["*"]
+		var allRequests = end - start + 1 + additionalKeys.length
+		var items = {}
+		var info = $("#info")
+		function doOnLoad() {
+			for(var ch = start; ch <= end; ch++ ) {
+				var key = String.fromCharCode(ch)
+				httpGetAsync("https://itunes.apple.com/cg/genre/ios-stickers/id6025?mt=8&letter=" + key, key, onStorePageLoaded)
+			}
+			for (var i = 0, len = additionalKeys.length; i < len; ++i) {
+				httpGetAsync("https://itunes.apple.com/cg/genre/ios-stickers/id6025?mt=8&letter=" + additionalKeys[i], additionalKeys[i], onStorePageLoaded)
+			}
+		}
+		function httpGetAsync(theUrl, key, callback)
+		{
+		    var xmlHttp = new XMLHttpRequest();
+		    xmlHttp.onreadystatechange = function() { 
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+		            callback(key, xmlHttp.responseText);
+		    }
+		    xmlHttp.open("GET", theUrl, true);
+		    xmlHttp.send(null);
+		}
+		function GetUnique(inputArray) {
+			var inLen = inputArray.length
+			var outputArray = [];
+			for (var i = 0; i < inLen; i++) {
+				var outLen = outputArray.length
+				var add = true
+				for (var j = 0; j < outLen && add; j++) {
+					if ($(outputArray[j]).find('a').attr('href') == $(inputArray[i]).find('a').attr('href')) {
+						add = false
+					}
+				}
+				if (add) {
+					outputArray.push(inputArray[i]);
+				}
+			}
+			return outputArray;
+		}
+
+		function onStorePageLoaded(key, text) {
+			var parser = new DOMParser();
+			var doc = parser.parseFromString(text, "text/html");
+			var apps = $(doc).find("#selectedcontent").find("li")
+//			var apps = $(text).find("#selectedcontent").find("li")
+			items[key] = GetUnique(apps)
+			allRequests--
+			info.append($("<div></div>").text("Loaded: " + key))
+			if (allRequests == 0) {
+				info.empty()
+				info.append($("<div></div>").text("Processing"))
+				setTimeout(onStoreLoaded, 0)
+			}
+		}
+
+		function onStoreLoaded() {
+			info.empty()
+			var count = 0
+			var lst = $("#app_list")
+			for(var ch = start; ch <= end; ch++ ) {
+				var key = String.fromCharCode(ch)
+				var itms = items[key]
+				count += itms.length
+				lst.append(
+					$("<div></div>")
+						.append($("<h3></h3>").text(key + " ("+itms.length+")"))
+						.append($("<ul></ul>").append(itms)))
+			}
+			for (var i = 0, len = additionalKeys.length; i < len; ++i) {
+				var key = additionalKeys[i]
+				var itms = items[key]
+				count += itms.length
+				lst.append(
+					$("<div></div>")
+						.append($("<h3></h3>").text(key))
+						.append($("<ul></ul>").append(itms)))
+			}
+			$("#app_header").text("Apps count: " + count)
+		}
+	</script>
+
+</body>
+
+</html>
